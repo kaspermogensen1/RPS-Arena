@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Rock Paper Scissors Simulation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #gameCanvas {
+            border: 1px solid #000;
+            max-width: 100%;
+            max-height: 70vh;
+        }
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 80vw;
+            max-width: 300px;
+        }
+        #speedControl {
+            width: 100%;
+            margin-top: 10px;
+        }
+        #speedLabel {
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        #modeSelector {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+        .modeButton {
+            padding: 5px 10px;
+            margin: 0 5px;
+            font-size: 14px;
+            cursor: pointer;
+            border: 1px solid #000;
+            background-color: #fff;
+        }
+        .modeButton.active {
+            background-color: #007bff;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="controls">
+        <div id="modeSelector">
+            <button class="modeButton active" data-mode="normal">Normal</button>
+            <button class="modeButton" data-mode="flow">Flow</button>
+        </div>
+        <input type="range" id="speedControl" min="1" max="10" value="3" step="0.5">
+        <label id="speedLabel" for="speedControl">Speed: <span id="speedValue">3</span></label>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const speedControl = document.getElementById('speedControl');
+        const speedValue = document.getElementById('speedValue');
+        const modeButtons = document.querySelectorAll('.modeButton');
+
+        let WIDTH, HEIGHT, OBJECT_RADIUS;
+        let BASE_SPEED = 3;
+        let gameMode = 'normal';
+
+        const icons = {
+            rock: '✊',
+            paper: '✋',
+            scissors: '✌️'
+        };
+
+        function resizeCanvas() {
+            const screenWidth = window.innerWidth;
+            const screenHeight = window.innerHeight;
+            const size = Math.min(screenWidth, screenHeight * 0.7);
+            
+            canvas.width = size;
+            canvas.height = size;
+            WIDTH = size;
+            HEIGHT = size;
+            OBJECT_RADIUS = size / 40;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            objects = createObjects();
+        });
+
+        class GameObject {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.setRandomVelocity();
+            }
+
+            setRandomVelocity() {
+                const angle = Math.random() * 2 * Math.PI;
+                this.dx = Math.cos(angle) * BASE_SPEED;
+                this.dy = Math.sin(angle) * BASE_SPEED;
+            }
+
+            move() {
+                this.x += this.dx;
+                this.y += this.dy;
+
+                if (this.x <= OBJECT_RADIUS || this.x >= WIDTH - OBJECT_RADIUS) {
+                    this.dx *= -1;
+                    this.x = Math.max(OBJECT_RADIUS, Math.min(this.x, WIDTH - OBJECT_RADIUS));
+                }
+                if (this.y <= OBJECT_RADIUS || this.y >= HEIGHT - OBJECT_RADIUS) {
+                    this.dy *= -1;
+                    this.y = Math.max(OBJECT_RADIUS, Math.min(this.y, HEIGHT - OBJECT_RADIUS));
+                }
+
+                this.dx += (Math.random() - 0.5) * 0.2;
+                this.dy += (Math.random() - 0.5) * 0.2;
+
+                const speed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+                this.dx = (this.dx / speed) * BASE_SPEED;
+                this.dy = (this.dy / speed) * BASE_SPEED;
+            }
+
+            draw() {
+                ctx.font = `${OBJECT_RADIUS * 2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(icons[this.type], this.x, this.y);
+            }
+
+            updateSpeed() {
+                const speed = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+                this.dx = (this.dx / speed) * BASE_SPEED;
+                this.dy = (this.dy / speed) * BASE_SPEED;
+            }
+        }
+
+        class Firework {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.particles = [];
+                for (let i = 0; i < 50; i++) {
+                    this.particles.push(new Particle(x, y));
+                }
+            }
+
+            update() {
+                this.particles = this.particles.filter(p => p.alpha > 0);
+                this.particles.forEach(p => p.update());
+            }
+
+            draw() {
+                this.particles.forEach(p => p.draw());
+            }
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 1;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.alpha = 1;
+                this.color = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += 0.05;
+                this.alpha -= 0.01;
+            }
+
+            draw() {
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function createObjects() {
+            const objects = [];
+            for (let i = 0; i < 3; i++) {
+                objects.push(new GameObject(Math.random() * (WIDTH - 2 * OBJECT_RADIUS) + OBJECT_RADIUS,
+                                            Math.random() * (HEIGHT - 2 * OBJECT_RADIUS) + OBJECT_RADIUS,
+                                            'rock'));
+                objects.push(new GameObject(Math.random() * (WIDTH - 2 * OBJECT_RADIUS) + OBJECT_RADIUS,
+                                            Math.random() * (HEIGHT - 2 * OBJECT_RADIUS) + OBJECT_RADIUS,
+                                            'paper'));
+                objects.push(new GameObject(Math.random() * (WIDTH - 2 * OBJECT_RADIUS) + OBJECT_RADIUS,
+                                            Math.random() * (HEIGHT - 2 * OBJECT_RADIUS) + OBJECT_RADIUS,
+                                            'scissors'));
+            }
+            return objects;
+        }
+
+        function checkCollision(obj1, obj2) {
+            const distance = Math.sqrt((obj1.x - obj2.x)**2 + (obj1.y - obj2.y)**2);
+            return distance <= 2 * OBJECT_RADIUS;
+        }
+
+        function battle(obj1, obj2) {
+            if (obj1.type === obj2.type) return null;
+            if ((obj1.type === 'rock' && obj2.type === 'scissors') ||
+                (obj1.type === 'paper' && obj2.type === 'rock') ||
+                (obj1.type === 'scissors' && obj2.type === 'paper')) {
+                return obj1;
+            } else {
+                return obj2;
+            }
+        }
+
+        let objects = createObjects();
+        let fireworks = [];
+        let gameOver = false;
+
+        function updateSpeed() {
+            if (gameMode === 'flow') {
+                const remainingObjects = objects.length;
+                BASE_SPEED = 3 + (9 - remainingObjects) * (5 / 6);
+                BASE_SPEED = Math.min(BASE_SPEED, 8);
+                speedControl.value = BASE_SPEED;
+                speedValue.textContent = BASE_SPEED.toFixed(1);
+            }
+            objects.forEach(obj => obj.updateSpeed());
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+            if (!gameOver) {
+                for (let obj of objects) {
+                    obj.move();
+                    obj.draw();
+                }
+
+                for (let i = 0; i < objects.length; i++) {
+                    for (let j = i + 1; j < objects.length; j++) {
+                        if (checkCollision(objects[i], objects[j])) {
+                            const winner = battle(objects[i], objects[j]);
+                            if (winner) {
+                                const loser = winner === objects[i] ? objects[j] : objects[i];
+                                objects = objects.filter(obj => obj !== loser);
+                                winner.x = (winner.x + loser.x) / 2;
+                                winner.y = (winner.y + loser.y) / 2;
+                                winner.setRandomVelocity();
+                                if (gameMode === 'flow') {
+                                    updateSpeed();
+                                }
+                            } else {
+                                const tempDx = objects[i].dx;
+                                const tempDy = objects[i].dy;
+                                objects[i].dx = objects[j].dx;
+                                objects[i].dy = objects[j].dy;
+                                objects[j].dx = tempDx;
+                                objects[j].dy = tempDy;
+                            }
+                        }
+                    }
+                }
+
+                if (objects.every(obj => obj.type === objects[0].type)) {
+                    gameOver = true;
+                    for (let i = 0; i < 10; i++) {
+                        fireworks.push(new Firework(Math.random() * WIDTH, Math.random() * HEIGHT));
+                    }
+                }
+            }
+
+            if (gameOver) {
+                // Draw large winning icon
+                ctx.font = `${WIDTH / 4}px Arial`;
+                ctx.fillStyle = 'black';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(icons[objects[0].type], WIDTH / 2, HEIGHT / 2 - WIDTH / 8);
+
+                // Draw winner text
+                ctx.font = `${WIDTH / 16}px Arial`;
+                ctx.fillText(`${objects[0].type.charAt(0).toUpperCase() + objects[0].type.slice(1)} wins!`, WIDTH / 2, HEIGHT / 2 + WIDTH / 8);
+
+                fireworks.forEach(fw => {
+                    fw.update();
+                    fw.draw();
+                });
+
+                fireworks = fireworks.filter(fw => fw.particles.length > 0);
+
+                if (fireworks.length === 0) {
+                    if (gameMode === 'flow') {
+                        gameOver = false;
+                        objects = createObjects();
+                        BASE_SPEED = 3;
+                        speedControl.value = BASE_SPEED;
+                        speedValue.textContent = BASE_SPEED.toFixed(1);
+                        objects.forEach(obj => obj.updateSpeed());
+                    } else {
+                        return;
+                    }
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        speedControl.addEventListener('input', function() {
+            if (gameMode === 'normal') {
+                BASE_SPEED = parseFloat(this.value);
+                speedValue.textContent = BASE_SPEED.toFixed(1);
+                objects.forEach(obj => obj.updateSpeed());
+            }
+        });
+
+        modeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                gameMode = this.dataset.mode;
+                modeButtons.forEach(btn => btn.classList.remove('active'));
+                this.classList.add('active');
+                if (gameMode === 'flow') {
+                    speedControl.disabled = true;
+                    BASE_SPEED = 3;
+                    speedControl.value = BASE_SPEED;
+                    speedValue.textContent = BASE_SPEED.toFixed(1);
+                } else {
+                    speedControl.disabled = false;
+                }
+                objects = createObjects();
+                gameOver = false;
+                fireworks = [];
+            });
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
