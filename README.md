@@ -2,6 +2,8 @@
 Rock Paper Scissors simulation built with HTML5 
 
 RPS Arena is a dynamic Rock Paper Scissors simulation built with HTML5 Canvas and JavaScript. Watch as rock, paper, and scissors icons battle it out in an animated arena!
+
+<a href="https://rpsarena.s3.eu-west-1.amazonaws.com/index.html" target="_blank">Try here</a>
 # Features
 
 - Two Game Modes:
